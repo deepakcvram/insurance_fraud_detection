@@ -6,3 +6,20 @@ venv/
 .ipynb_checkpoints/
 .DS_Store
 Thumbs.db
+*.log
+
+# Phase 3: Kafka Docker volumes
+kafka_pipeline/data/
+kafka_pipeline/*.log
+
+# Phase 4: HDFS Docker volumes
+hdfs_data/
+
+# Phase 5: Generated analytics output (re-produced on each pipeline run)
+analytics_output/
+
+# Editor / IDE
+.idea/
+.vscode/
+*.swp
+*.swo

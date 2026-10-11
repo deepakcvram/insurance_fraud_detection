@@ -129,7 +129,7 @@ model, encoder, metadata = load_assets()
 st.sidebar.markdown(
     """
     <div style='text-align: center; margin-bottom: 20px;'>
-        <h2 style='color: #818cf8; margin-bottom: 0px;'>🛡️ ClaimGuard AI</h2>
+        <h2 style='color: #818cf8; margin-bottom: 0px;'>🛡️ ClaimShield AI</h2>
         <p style='color: #64748b; font-size: 0.9rem;'>Risk Optimization Console</p>
     </div>
     <hr style='border: 1px solid #242b3b;' />

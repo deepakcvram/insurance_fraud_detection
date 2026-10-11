@@ -3,3 +3,9 @@ pandas
 numpy
 scikit-learn
 xgboost
+
+# Phase 3: Apache Kafka integration
+kafka-python-ng
+
+# Phase 4: HDFS integration (WebHDFS REST calls)
+requests

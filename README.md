@@ -1,89 +1,287 @@
-# 🛡️ ClaimGuard AI: Vehicle Insurance Claim Fraud Detection
+# 🛡️ ClaimShield AI — Vehicle Insurance Claim Fraud Detection
 
-ClaimGuard AI is a premium machine learning dashboard designed to assess vehicle insurance claim fraud risk. Built specifically for insurance underwriters and risk auditors, this project demonstrates a complete production-grade machine learning workflow—handling severe class imbalance, deploying state-of-the-art gradient boosting classifiers, and implementing business-centric evaluation metrics like **Audit Efficiency (Lift)**.
+> An end-to-end machine learning platform for real-time and historical insurance claim fraud detection, built across five incremental engineering phases.
 
-### 🔗 Live Dashboard: https://vehicle-insurance-claim-fraud-detection.streamlit.app/
-
----
-
-## 🚀 Key Features
-
-*   **XGBoost Classifier**: Powered by an optimized Gradient Boosting model built for handling high-dimensional tabular datasets.
-*   **Imbalance-Resilient Training**: Implements cost-sensitive learning (`scale_pos_weight = 15.71`) to train effectively on minority fraud cases (~6% prevalence) without oversampling noise.
-*   **Operational Threshold Tuning**: A global risk threshold slider allowing underwriters to tune the decision boundary in real-time, shifting focus between catching all fraud (**Recall**) and avoiding false alarms (**Precision**).
-*   **Business-Centric Evaluation**: Replaces misleading standard accuracy with **Audit Efficiency (Lift)**, demonstrating a **2.7x efficiency multiplier** over random audits at the optimal threshold.
-*   **Interactive Streamlit UI**: Sleek dark-mode interface featuring dynamic metrics, interactive risk assessment forms, and real-time feature importances.
+[![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python)](https://www.python.org/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-1.65-red?logo=streamlit)](https://streamlit.io/)
+[![Apache Kafka](https://img.shields.io/badge/Apache%20Kafka-3.9.0-black?logo=apachekafka)](https://kafka.apache.org/)
+[![Hadoop](https://img.shields.io/badge/Hadoop%20HDFS-3.3.6-yellow?logo=apachehadoop)](https://hadoop.apache.org/)
+[![XGBoost](https://img.shields.io/badge/XGBoost-Classifier-green)](https://xgboost.readthedocs.io/)
+[![Docker](https://img.shields.io/badge/Docker-Compose-blue?logo=docker)](https://www.docker.com/)
 
 ---
 
-## 📊 Performance Metrics (Test Set Evaluation)
+## 📌 Project Overview
 
-| Decision Threshold | Recall (Fraud Caught) | Precision (Flag Accuracy) | Audit Efficiency (Lift) | Accuracy |
-| :--- | :--- | :--- | :--- | :--- |
-| **0.50 (Default)** | 2.7% | 41.7% | 7.0x | 93.8% |
-| **0.15 (Balanced)** | **63.8%** | **16.1%** | **2.7x** | **77.9%** |
-| **0.10 (High Sensitivity)**| 84.3% | 14.1% | 2.4x | 68.1% |
+ClaimShield AI detects potentially fraudulent vehicle insurance claims using a trained XGBoost model. It supports both interactive single-claim assessment via a Streamlit dashboard and continuous real-time processing via a Kafka streaming pipeline. Validated claims are persisted in HDFS for historical batch analysis.
+
+**Key capabilities:**
+
+| Capability | Technology |
+|---|---|
+| ML-based fraud scoring | XGBoost + scikit-learn preprocessing |
+| Interactive claim assessment | Streamlit dashboard |
+| Real-time claim streaming | Apache Kafka (KRaft mode) |
+| Persistent claim storage | Hadoop HDFS (WebHDFS REST) |
+| Historical batch inference | Python + Pandas |
+| Containerized infrastructure | Docker Compose |
 
 ---
 
-## 📁 Repository Structure
+## 🏗️ Architecture
 
 ```
-├── .gitignore             # Prevents pushing large datasets & cache files
-├── README.md              # Project documentation
-├── requirements.txt       # Python library dependencies
-├── dataset.csv            # Vehicle insurance claims dataset (15,419 records)
-├── model.ipynb            # Jupyter Notebook for baseline prototyping & EDA
-├── train_and_save.py      # Production training script (splits, encodes, fits XGBoost)
-├── app.py                 # Streamlit dashboard script
-├── model.pkl              # Serialized XGBoost model
-├── encoder.pkl            # Serialized One-Hot Encoder pipeline
-└── metadata.pkl           # Helper mappings, column alignments, & test split arrays
+┌─────────────────────────────────────────────────────────────┐
+│                     ClaimShield AI                          │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  [Streamlit Dashboard]  ──────────────────────────────────► │
+│       (app.py)            Real-time single-claim scoring    │
+│                                                             │
+│  [Kafka Producer]  ──►  [Kafka Topic: insurance_claims]     │
+│  (kafka_producer.py)          │                             │
+│                               ▼                             │
+│                     [Kafka Consumer]                        │
+│                     (kafka_consumer.py)                     │
+│                               │                             │
+│                    JSON deserialization                      │
+│                    Schema validation                         │
+│                               │                             │
+│                               ▼                             │
+│                     [HDFS Storage]  ◄── WebHDFS REST        │
+│                     (hdfs_storage.py)                       │
+│                               │                             │
+│                               ▼                             │
+│                  [Historical Analytics]                      │
+│                 (historical_analytics.py)                   │
+│                               │                             │
+│           ┌───────────────────┼───────────────────┐         │
+│           ▼                   ▼                   ▼         │
+│  Batch Inference       Analytics Report    Investigation     │
+│  Results CSV          JSON Summary         Queue CSV         │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 🛠️ Installation & Setup (Local Run)
+## 📂 Repository Structure
 
-### 1. Clone the repository
+```
+Vehicle-Insurance-Claim-Fraud-Detection-main/
+│
+├── app.py                        # Streamlit interactive dashboard
+├── train_and_save.py             # ML model training script
+├── model.ipynb                   # Exploratory notebook
+├── dataset.csv                   # Training dataset (15,419 records)
+│
+├── model.pkl                     # Trained XGBClassifier
+├── encoder.pkl                   # Fitted OneHotEncoder (nominal columns)
+├── metadata.pkl                  # Binary/ordinal mappings + feature column list
+│
+├── requirements.txt              # Python dependencies
+├── .env.example                  # Environment variable template
+│
+└── kafka_pipeline/
+    ├── docker-compose.yml        # Kafka + HDFS NameNode + DataNode
+    ├── config.py                 # Centralised configuration (KafkaConfig)
+    ├── kafka_producer.py         # Publishes claim events to Kafka
+    ├── kafka_consumer.py         # Consumes, validates, and stores claims
+    ├── sample_claims.py          # 5 predefined + random claim generators
+    ├── hdfs_storage.py           # WebHDFS REST client (HDFSStorage class)
+    ├── feature_preprocessor.py   # Shared preprocessing (FeaturePreprocessor)
+    ├── historical_analytics.py   # Batch inference pipeline
+    ├── test_phase5.py            # Automated test suite (10 tests)
+    └── hadoop_config/
+        ├── core-site.xml         # HDFS core configuration
+        └── hdfs-site.xml         # HDFS replication configuration
+```
+
+---
+
+## 🚀 Quickstart
+
+### Prerequisites
+
+- Python 3.10+ (tested on 3.13)
+- Docker Desktop (for Kafka + HDFS)
+
+### 1. Clone the Repository
+
 ```bash
-git clone https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
-cd YOUR_REPO_NAME
+git clone https://github.com/<your-username>/Vehicle-Insurance-Claim-Fraud-Detection.git
+cd Vehicle-Insurance-Claim-Fraud-Detection
 ```
 
-### 2. Install dependencies
-Ensure you have Python 3.10+ installed, then run:
+### 2. Create a Virtual Environment and Install Dependencies
+
 ```bash
+python -m venv .venv
+
+# Windows
+.venv\Scripts\activate
+
+# macOS / Linux
+source .venv/bin/activate
+
 pip install -r requirements.txt
 ```
 
-### 3. Train the Model
-Run the training pipeline to generate the serialized models and metadata:
+### 3. Train the Model (if artifacts are not present)
+
 ```bash
 python train_and_save.py
 ```
 
+This produces `model.pkl`, `encoder.pkl`, and `metadata.pkl` in the project root.
+
 ### 4. Run the Streamlit Dashboard
-Launch the web interface locally:
+
 ```bash
 streamlit run app.py
 ```
-The app will open automatically in your browser at `http://localhost:8501`.
+
+Open `http://localhost:8501` in your browser to assess individual claims interactively.
 
 ---
 
-## 🧠 Data Processing & Feature Engineering
+## ⚙️ Kafka + HDFS Pipeline
 
-1.  **Anomaly Resolution**: Identified and resolved an age data anomaly where a subset of minor policyholders were placeholder-imputed with `0` years old (mapped to `16`).
-2.  **Ordinal Mapping**: Standardized size, period, and tier structures (e.g., `VehiclePrice`, `AgeOfVehicle`, `PastNumberOfClaims`) to continuous ranks.
-3.  **Nominal Columns**: Encoded high-cardinality categorical data (`Make`, `PolicyType`, `DayOfWeekClaimed`) using `OneHotEncoder(drop='first', handle_unknown='ignore')` fitted strictly on the training set to prevent data leakage.
-4.  **Dimensionality**: Preprocessing expands the 29 base features to **86 model features** to capture non-linear relationships.
+### Start Infrastructure
+
+```bash
+cd kafka_pipeline
+docker compose up -d
+```
+
+This starts three containers:
+
+| Container | Role | Port |
+|---|---|---|
+| `claimshield-kafka` | Kafka broker (KRaft mode) | 9092 |
+| `claimshield-namenode` | HDFS NameNode | 9870 (WebHDFS), 9000 (IPC) |
+| `claimshield-datanode` | HDFS DataNode | 9864 |
+
+Wait ~30 seconds for all containers to become healthy:
+
+```bash
+docker compose ps
+```
+
+### Start the Consumer
+
+Open a terminal in the project root:
+
+```bash
+.venv\Scripts\python kafka_pipeline/kafka_consumer.py
+```
+
+The consumer will listen on the `insurance_claims` topic and persist validated claims to HDFS.
+
+### Publish Sample Claims
+
+Open a **second** terminal in the project root:
+
+```bash
+.venv\Scripts\python kafka_pipeline/kafka_producer.py
+```
+
+This publishes the 5 predefined sample claims. The consumer terminal will display validation results for each.
+
+### Run Historical Batch Analysis
+
+After claims have been stored in HDFS, run the batch inference pipeline:
+
+```bash
+.venv\Scripts\python kafka_pipeline/historical_analytics.py
+```
+
+Output files are written to `analytics_output/`:
+
+| File | Contents |
+|---|---|
+| `batch_inference_results_<date>.csv` | Per-claim fraud scores and decisions |
+| `historical_analytics_report_<date>.json` | Aggregate statistics and summary |
+| `investigation_queue.csv` | Claims flagged for manual review |
+| `rejected_claims_<date>.json` | Records that failed validation |
+
+### Run Automated Tests
+
+```bash
+.venv\Scripts\python -m pytest kafka_pipeline/test_phase5.py -v
+```
 
 ---
 
-## 🔑 Technologies Used
+## 🧠 ML Model Details
 
-*   **Core**: Python, Pandas, NumPy
-*   **Machine Learning**: Scikit-Learn, XGBoost
-*   **Inference Serialization**: Pickle
-*   **Application Deployment**: Streamlit, Streamlit Community Cloud
+| Attribute | Value |
+|---|---|
+| Algorithm | XGBoost (`XGBClassifier`) |
+| Training records | 12,335 |
+| Input features | 86 (after encoding) |
+| Class imbalance handling | `scale_pos_weight` |
+| Default fraud threshold | 0.15 (dashboard) / 0.70 (batch pipeline) |
+
+### Feature Pipeline
+
+Raw claim fields (29 domain columns) → **FeaturePreprocessor** → 86 model features
+
+| Transformation | Columns |
+|---|---|
+| **Binary encoding** | `Sex`, `AccidentArea`, `Fault`, `PoliceReportFiled`, `WitnessPresent`, `AgentType` |
+| **Ordinal encoding** | `VehiclePrice`, `AgeOfVehicle`, `AgeOfPolicyHolder`, `Days_Policy_Accident`, `Days_Policy_Claim`, `PastNumberOfClaims`, `NumberOfSuppliments`, `AddressChange_Claim`, `NumberOfCars` |
+| **One-hot encoding** | `Make`, `PolicyType`, `MaritalStatus`, `VehicleCategory`, `BasePolicy`, `Month`, `MonthClaimed`, `DayOfWeek`, `DayOfWeekClaimed` |
+| **Numeric (passthrough)** | `Age`, `Deductible`, `DriverRating`, `WeekOfMonth`, `WeekOfMonthClaimed` |
+
+---
+
+## 📋 Dataset
+
+The model is trained on the [Vehicle Insurance Claim Fraud Detection dataset](https://www.kaggle.com/datasets/shivamb/vehicle-claim-fraud-detection) from Kaggle.
+
+- **Total records:** 15,419
+- **Fraud prevalence:** ~6% (highly imbalanced)
+- **Original columns:** 33
+
+---
+
+## ⚠️ Known Limitations
+
+1. **Pickle version compatibility:** `model.pkl` and `encoder.pkl` were serialized with specific library versions. If you see `UserWarning: Trying to unpickle estimator from version X`, re-run `train_and_save.py` in your environment to regenerate the artifacts.
+
+2. **HDFS requires Docker:** The Kafka consumer writes to HDFS via WebHDFS REST. Without Docker running, the consumer still validates claims but HDFS writes will fail gracefully with a warning.
+
+3. **Windows hostname resolution:** HDFS DataNode redirects use Docker-internal hostnames. The `hdfs_storage.py` client handles this by rewriting redirect URLs to `localhost` automatically.
+
+4. **Unknown vehicle makes:** The OneHotEncoder is fitted on training data. If a claim contains a `Make` value not seen during training, it is encoded as all-zeros (safe — `handle_unknown='ignore'`).
+
+---
+
+## 🗂️ Development Phases
+
+| Phase | Description | Key Files |
+|---|---|---|
+| **1** | XGBoost model + Streamlit dashboard | `train_and_save.py`, `app.py` |
+| **2** | Exploratory data analysis | `model.ipynb` |
+| **3** | Kafka streaming pipeline | `kafka_producer.py`, `kafka_consumer.py`, `docker-compose.yml` |
+| **4** | HDFS persistence | `hdfs_storage.py`, `docker-compose.yml` (extended) |
+| **5** | Historical batch inference | `feature_preprocessor.py`, `historical_analytics.py`, `test_phase5.py` |
+
+---
+
+## 🛠️ Tech Stack
+
+- **Python 3.13** — core language
+- **XGBoost + scikit-learn** — machine learning
+- **Streamlit** — interactive dashboard
+- **Apache Kafka 3.9.0** — real-time event streaming (KRaft mode, no ZooKeeper)
+- **Hadoop HDFS 3.3.6** — distributed persistent storage
+- **Docker Compose** — container orchestration
+- **Pandas + NumPy** — data manipulation and analytics
+- **kafka-python-ng** — Python Kafka client
+
+---
+
+## 📄 License
+
+This project is intended for educational and portfolio purposes.

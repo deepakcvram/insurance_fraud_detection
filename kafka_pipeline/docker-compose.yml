@@ -1,0 +1,96 @@
+# ============================================================
+# ClaimShield AI — Phase 3 (Kafka) & Phase 4 (HDFS)
+# Single-node Kafka in KRaft mode + Apache Hadoop HDFS (NameNode & DataNode)
+# Compatible with Docker Compose v2 (docker compose).
+# ============================================================
+
+services:
+
+  # ------------------------------------------------------------
+  # Apache Kafka (KRaft mode, no ZooKeeper)
+  # ------------------------------------------------------------
+  kafka:
+    image: apache/kafka:3.9.0
+    container_name: claimshield-kafka
+    ports:
+      - "9092:9092"                     # Kafka broker external listener
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
+      KAFKA_LISTENERS: "PLAINTEXT://kafka:29092,CONTROLLER://kafka:9093,EXTERNAL://0.0.0.0:9092"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:29092,EXTERNAL://localhost:9092"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT"
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_NUM_PARTITIONS: 3
+      CLUSTER_ID: "claimshield-kafka-cluster-01"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  # ------------------------------------------------------------
+  # Apache Hadoop HDFS — NameNode
+  # ------------------------------------------------------------
+  namenode:
+    image: apache/hadoop:3.3.6
+    container_name: claimshield-namenode
+    hostname: namenode
+    ports:
+      - "9870:9870"                     # WebHDFS / NameNode HTTP UI
+      - "9000:9000"                     # NameNode IPC port
+    environment:
+      ENSURE_NAMENODE_DIR: "/hadoop/dfs/name"
+    volumes:
+      - ./hadoop_config/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml:ro
+      - ./hadoop_config/hdfs-site.xml:/opt/hadoop/etc/hadoop/hdfs-site.xml:ro
+      - namenode_data:/hadoop/dfs/name
+    command: ["hdfs", "namenode"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9870/dfshealth.html || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 25s
+    restart: unless-stopped
+
+  # ------------------------------------------------------------
+  # Apache Hadoop HDFS — DataNode
+  # ------------------------------------------------------------
+  datanode:
+    image: apache/hadoop:3.3.6
+    container_name: claimshield-datanode
+    hostname: datanode
+    ports:
+      - "9864:9864"                     # DataNode HTTP UI / WebHDFS direct transfer
+    environment:
+      WAITFOR: "namenode:9000"
+    volumes:
+      - ./hadoop_config/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml:ro
+      - ./hadoop_config/hdfs-site.xml:/opt/hadoop/etc/hadoop/hdfs-site.xml:ro
+      - datanode_data:/hadoop/dfs/data
+    command: ["hdfs", "datanode"]
+    depends_on:
+      - namenode
+    restart: unless-stopped
+
+# ------------------------------------------------------------
+# Named Volumes for Persistence
+# ------------------------------------------------------------
+volumes:
+  kafka_data:
+    driver: local
+  namenode_data:
+    driver: local
+  datanode_data:
+    driver: local
